@@ -2,6 +2,7 @@
 // https://youtu.be/QjmPjT-Iheg?si=tA9sfI9sk42dLhv9 
 
 #define SDL_MAIN_HANDLED
+#define GLM_ENABLE_EXPERIMENTAL
 #include <iostream>
 #include <format>
 #include <vector>
@@ -22,6 +23,7 @@
 #include <imgui_impl_opengl3.h>
 
 #include "Camera.h"
+#include "Figure.h"
 
 //#define WIN_WIDTH 1280
 //#define WIN_HEIGHT 720 
@@ -216,30 +218,19 @@ int32_t screenHeight = 720;
 SDL_Window* gGraphicsApplicationWindow = nullptr;
 SDL_GLContext gOpenGLContext = nullptr;
 
-float gColorWindow[3] = { 0.0f,0.0f,0.0f };
-float gColorQuad1[3]  = { 1.0f,0.0f,0.0f };
-float gColorQuad2[3]  = { 1.0f,0.0f,0.0f };
-float gColorQuad3[3]  = { 1.0f,0.0f,0.0f };
-float gColorQuad4[3]  = { 1.0f,0.0f,0.0f };
+float gColorWindow[3] = { 0.0f,0.0f,0.0f	 };
 
-bool gShowQuad = false;
 bool gQuit = false;
+bool attachCursor = true;
 
-float gQuadWidth = 0.5f;
-float gQuadHeight = 0.5f;
-
-float uOffset = -5.0f;
-float uRotation = 0.0f;
+float delay = 16.0f;
 
 Camera camera; 
+Figure figure;
 
 std::unordered_map<SDL_Keycode, bool> strgKeyCodes;
+std::vector<GLuint> indexBufferData;
 
-// VAO
-GLuint gVertexArrayObject = 0;
-// VBO
-GLuint gVertexBufferObject = 0;
-GLuint gIndexBufferObject = 0;
 // Program Object for our shaders 
 GLuint gGraphicsPipelineProgram = 0;
 
@@ -339,82 +330,7 @@ void initializeProgram()
 
 void vertexSpecification()
 {
-	//
-	// lives on CPU.
-	// setting our vertex positions
-	//
-	const std::vector<GLfloat> vertexData
-	{
-		// x    y     z
-		-0.8f, -0.8f, 0.0f,  // left vertex position
-		 1.0f, 0.0f, 0.0f,   // color 
-		 0.8f, -0.8f, 0.0f,  // right vertex position
-		 0.0f, 1.0f, 0.0f,	 // color 
-		 0.0f,  0.8f, 0.0f,  // top vertex position 
-		 0.0f, 0.0f, 1.0f    // color 
-	};
-	const std::vector<GLfloat> vertexDataQuad
-	{
-		//First triangle
-		-gQuadWidth, -gQuadHeight, 0.0f,
-		 gColorQuad1[0],  gColorQuad1[1], gColorQuad1[2],
-
-		 gQuadWidth, -gQuadHeight, 0.0f,
-		 gColorQuad2[0],  gColorQuad2[1], gColorQuad2[2],
-
-		-gQuadWidth,  gQuadHeight, 0.0f,
-		 gColorQuad3[0],  gColorQuad3[1], gColorQuad3[2],
-
-		//Second triangle
-		 gQuadWidth,  gQuadHeight, 0.0f,
-		 gColorQuad4[0],  gColorQuad4[1], gColorQuad4[2],
-	}; // we need to go in a wind order 
-
-	/*<-----> WITH DSA <----->*/
-	// creating VAO and VBO
-	glCreateVertexArrays(1, &gVertexArrayObject);
-	glCreateBuffers(1, &gVertexBufferObject);
-	
-	// populating data into VBO
-	glNamedBufferData(gVertexBufferObject, 
-					  vertexDataQuad.size() * sizeof(GL_FLOAT),
-					  vertexDataQuad.data(),
-					  GL_STATIC_DRAW);
-
-	// setting up an index buffer object(IBO or EBO)
-	const std::vector<GLuint> indexBufferData{ 2,0,1, 3,2,1 };
-	glCreateBuffers(1, &gIndexBufferObject);
-	glNamedBufferData(gIndexBufferObject, 
-					  indexBufferData.size() * sizeof(GLuint), 
-					  indexBufferData.data(), 
-					  GL_STATIC_DRAW);
-	glVertexArrayElementBuffer(gVertexArrayObject, gIndexBufferObject);
-
-	//instead of binding vertexes and buffers we can use this:
-	glVertexArrayVertexBuffer(gVertexArrayObject,
-							  0,
-							  gVertexBufferObject, 
-							  0,
-							  6 * sizeof(GLfloat));
-	
-	glEnableVertexArrayAttrib(gVertexArrayObject, 0);
-	glVertexArrayAttribFormat(gVertexArrayObject,
-							  0,
-							  3, 
-							  GL_FLOAT, 
-							  GL_FALSE,
-							  0);
-	glVertexArrayAttribBinding(gVertexArrayObject, 0 /* the index of this operation */, 0 /* the index of VAO */);
-
-	glEnableVertexArrayAttrib(gVertexArrayObject, 1);
-	glVertexArrayAttribFormat(gVertexArrayObject,
-							  1,
-							  3,
-							  GL_FLOAT,
-							  GL_FALSE, 
-							  3 * sizeof(GLfloat));
-	glVertexArrayAttribBinding(gVertexArrayObject, 1, 0);
-
+	figure.initQuad();
 }
 
 GLuint compileShader(GLuint pType, const std::string& pSourceCode)
@@ -500,8 +416,9 @@ void imGuiSpecification()
 	static int32_t i = 0;
 	if (firstTime)
 	{
-		ImGui::SetNextWindowPos({ 100,100 });
+		ImGui::SetNextWindowPos({ 0,0 });
 		ImGui::SetNextWindowSize({ 720,250 });
+		ImGui::SetNextWindowCollapsed(true);
 		firstTime = false;
 	}
 	ImGui::Begin("I am Quad", &gQuit, ImGuiFocusedFlags_None);
@@ -511,22 +428,47 @@ void imGuiSpecification()
 	ImGui::Spacing();
 	ImGui::Separator();
 
-	ImGui::Checkbox("Show the Quad", &gShowQuad);
+	ImGui::Checkbox("Show the Quad", &figure.figureIsShown());
 
 	ImGui::Spacing();
 
-	if (ImGui::ColorEdit3("Color of the Quad vertex 1", gColorQuad1) ||
-		ImGui::ColorEdit3("Color of the Quad vertex 2", gColorQuad2) ||
-		ImGui::ColorEdit3("Color of the Quad vertex 3", gColorQuad3) ||
-		ImGui::ColorEdit3("Color of the Quad vertex 4", gColorQuad4))
+	float colorFigure1[3] =
+	{
+		figure.getColors()[0][0],
+		figure.getColors()[0][1],
+		figure.getColors()[0][2],
+	};
+	float colorFigure2[3] =
+	{
+		figure.getColors()[1][0],
+		figure.getColors()[1][1],
+		figure.getColors()[1][2],
+	};
+	float colorFigure3[3] =
+	{
+		figure.getColors()[2][0],
+		figure.getColors()[2][1],
+		figure.getColors()[2][2],
+	};
+	float colorFigure4[3] =
+	{
+		figure.getColors()[3][0],
+		figure.getColors()[3][1],
+		figure.getColors()[3][2],
+	};
+
+	if (ImGui::ColorEdit3("Color of the Quad vertex 1", colorFigure1) ||
+		ImGui::ColorEdit3("Color of the Quad vertex 2", colorFigure1) ||
+		ImGui::ColorEdit3("Color of the Quad vertex 3", colorFigure1) ||
+		ImGui::ColorEdit3("Color of the Quad vertex 4", colorFigure1))
 	{
 		vertexSpecification();
 	}
 
 	ImGui::Spacing();
 
-	if (ImGui::SliderFloat("Width", &gQuadWidth, 0.1f, 1.0f) ||
-		ImGui::SliderFloat("Height", &gQuadHeight, 0.1f, 1.0f))
+	if (ImGui::SliderFloat("Width", &figure.getWidth(), 0.1f, 1.0f) ||
+		ImGui::SliderFloat("Height", &figure.getHeight(), 0.1f, 1.0f))
 	{
 		vertexSpecification();
 	}
@@ -542,7 +484,11 @@ void imGuiSpecification()
 
 void input()
 {
+	static float mouseX = screenWidth  / 2;
+	static float mouseY = screenHeight / 2;
+
 	auto state = SDL_GetKeyboardState(NULL);
+
 	SDL_Event events;
 	while (SDL_PollEvent(&events) != 0)
 	{
@@ -554,9 +500,16 @@ void input()
 			gQuit = true;
 			return;
 		}
-		uRotation -= 0.1f;
 
-		float speed = 0.5f;
+		if (events.type == SDL_EVENT_MOUSE_MOTION)
+		{
+			mouseX += events.motion.xrel;
+			mouseY += events.motion.yrel;
+			camera.mouseLook(mouseX, mouseY);
+		}
+
+		figure.setRotation(figure.getRotation() - 0.1f);
+		float speed = 0.1f;
 		// use some other keys to move our object
 		if (state[SDL_SCANCODE_W])
 			camera.moveForward(speed);
@@ -566,13 +519,15 @@ void input()
 			camera.moveLeft(speed);
 		if (state[SDL_SCANCODE_D])
 			camera.moveRight(speed);
+		if (state[SDL_SCANCODE_Z])
+			attachCursor = !attachCursor;
 	}
 }
 
 void preDraw()
 {
-	glDisable(GL_DEPTH_TEST);
-	glDisable(GL_CULL_FACE);
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
 
 	//
 	// ImGui
@@ -599,12 +554,12 @@ void preDraw()
 	// use our shader
 	glUseProgram(gGraphicsPipelineProgram);
 
-	uRotation -= 0.1f;
+	figure.setRotation(figure.getRotation() - 0.1f);
 
 	// from local to world space
 	glm::mat4 model(1.0f); 
-	model = glm::translate(model, glm::vec3(0.0f, 0.0f, uOffset));
-	model = glm::rotate(model, glm::radians(uRotation), glm::vec3(0.0f, 1.0f, 0.0f));
+	model = glm::translate(model, glm::vec3(0.0f, 0.0f, figure.getOffset()));
+	model = glm::rotate(model, glm::radians(figure.getRotation()), glm::vec3(0.0f, 1.0f, 0.0f));
 	model = glm::scale(model, glm::vec3(2.0f, 2.0f, 2.0f));
 
 	GLuint uModelMatrixLocation = glGetUniformLocation(gGraphicsPipelineProgram, "uModelMatrix");
@@ -650,19 +605,8 @@ void draw()
 {
 	ImGui::EndFrame();
 
-	// enable our attributes
-	glBindVertexArray(gVertexArrayObject);
-	// select the VBO which we wanna use
-	glBindBuffer(GL_ARRAY_BUFFER, gVertexBufferObject);
-	// render the data. 0 the beginning of the array, 3 - the end
-	//glDrawArrays(GL_TRIANGLES, 0, 6);
-	if (gShowQuad)
-	{
-		glDrawElements(GL_TRIANGLES,
-					   6,
-					   GL_UNSIGNED_INT,
-					   0);
-	}
+	figure.render();
+
 	// stopping using our current graphics pipeline
 	glUseProgram(0);
 
@@ -675,12 +619,24 @@ void mainLoop()
 {
 	while (!gQuit)
 	{
+		if (attachCursor)
+		{
+			SDL_WarpMouseInWindow(gGraphicsApplicationWindow, screenWidth / 2, screenHeight / 2);
+			SDL_SetWindowRelativeMouseMode(gGraphicsApplicationWindow, true);
+		}
+		else
+			SDL_SetWindowRelativeMouseMode(gGraphicsApplicationWindow, false);
+
 		input();
+		float lastTime = SDL_GetTicks();
 		preDraw();
 		draw();		
 
 		// Update the screen // swapping buffers 
 		SDL_GL_SwapWindow(gGraphicsApplicationWindow);
+		float delta = SDL_GetTicks() - lastTime;
+		if (delta < delay)
+			SDL_Delay(static_cast<Uint32>(delay - delta));
 	}
 }
 

@@ -15,26 +15,50 @@ Camera::Camera()
 
 glm::mat4 Camera::getViewMatrix() const
 {
-	return glm::lookAt(mEye, mViewDirection, mUpVector);
+	return glm::lookAt(mEye, mEye + mViewDirection, mUpVector);
+}
+
+void Camera::mouseLook(float pMouseX, float pMouseY)
+{
+	glm::vec2 currentMouse = glm::vec2(pMouseX, pMouseY);
+	
+	static bool firstLook = true;
+	if (firstLook)
+	{
+		mOldMousePos = currentMouse;
+		firstLook = false;
+	}
+
+	glm::vec2 mouseDelta = mOldMousePos - currentMouse;
+
+	mViewDirection = glm::rotate(mViewDirection, glm::radians(mouseDelta.x), mUpVector);
+
+	glm::vec3 xVector3 = glm::normalize(glm::cross(mViewDirection, mUpVector));
+	mViewDirection = glm::rotate(mViewDirection, glm::radians(mouseDelta.y), xVector3);
+
+	mOldMousePos = currentMouse;
 }
 
 void Camera::moveForward(float pSpeed)
 {
-	mEye.z += pSpeed;
-	
-}
+	mEye += (mViewDirection * pSpeed);
+}	
 
 void Camera::moveBackward(float pSpeed)
 {
-	mEye.z -= pSpeed;
+	mEye -= (mViewDirection * pSpeed);
 }
 
 void Camera::moveLeft(float pSpeed)
 {
-	mEye.x += pSpeed;
+	// cross product is finding an orthogonal vector to Z and Y axis
+	// normalizing is making moving a bit smoother
+	glm::vec3 tmpLeftVec = glm::normalize(glm::cross(mUpVector, mViewDirection));
+	mEye += tmpLeftVec * pSpeed;
 }
 
 void Camera::moveRight(float pSpeed)
 {
-	mEye.x -= pSpeed;
+	glm::vec3 tmpRightVec = glm::normalize(glm::cross(mViewDirection, mUpVector));
+	mEye += tmpRightVec * pSpeed;
 }
