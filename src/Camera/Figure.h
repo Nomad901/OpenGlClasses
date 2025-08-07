@@ -1,4 +1,6 @@
 #pragma once
+#include <iostream>
+#include <format>
 #include <vector>
 #include <array>
 #include <span>
@@ -10,9 +12,11 @@ class Figure
 {
 public:
 	Figure();
+	~Figure();
 
 	auto initTriangle() -> void;
 	auto initQuad() -> void;
+	auto initCube() -> void;
 
 	auto showFigure(bool pShowFigure) -> void;
 	auto figureIsShown() noexcept -> bool&;
@@ -28,6 +32,9 @@ public:
 	auto setColors(const std::array<std::array<float, 3>, 4>& pColors) -> void;
 	auto getColors() noexcept -> std::array<std::array<float, 3>, 4>&;
 	auto getIndexes() noexcept -> const std::vector<int16_t>&;
+	
+	auto setMultiplier(int32_t pMultiplier) -> void;
+	auto getMultyplier() const noexcept -> int32_t;
 
 	auto setOffset(float pOffset) -> void;
 	auto getOffset() const noexcept -> float;
@@ -36,16 +43,18 @@ public:
 
 	auto render() -> void;
 
-private:
+public:
 	enum class Type
 	{
 		TRIANGLE = 0,
-		QUAD = 1
+		QUAD = 1,
+		CUBE = 2
 	};
 
 private:
 	bool mFigureIsShown{ true };
 
+	int32_t mMultiplier{};
 	float mOffset{};
 	float mRotation{};
 
