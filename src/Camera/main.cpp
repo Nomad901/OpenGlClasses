@@ -23,7 +23,7 @@
 #include <imgui_impl_opengl3.h>
 
 #include "Camera.h"
-#include "Figure.h"
+#include "BlockFactory.h"
 
 //#define WIN_WIDTH 1280
 //#define WIN_HEIGHT 720 
@@ -226,7 +226,7 @@ bool attachCursor = true;
 float delay = 16.0f;
 
 Camera camera; 
-Figure figure;
+BlockFactory factory;
 
 std::unordered_map<SDL_Keycode, bool> strgKeyCodes;
 std::vector<GLuint> indexBufferData;
@@ -326,11 +326,12 @@ void initializeProgram()
 	// needed headers were included!
 	ImGui_ImplSDL3_InitForOpenGL(gGraphicsApplicationWindow, gOpenGLContext);
 	ImGui_ImplOpenGL3_Init("#version 410");
+
+	factory.pushFigure(Figure::Type::CUBE);
 }
 
 void vertexSpecification()
 {
-	figure.initQuad();
 }
 
 GLuint compileShader(GLuint pType, const std::string& pSourceCode)
@@ -422,39 +423,57 @@ void imGuiSpecification()
 		firstTime = false;
 	}
 	ImGui::Begin("I am Quad", &gQuit, ImGuiFocusedFlags_None);
-	
-	ImGui::Text("If you want to move the Quad, you can use your arrows on the keyboard or WASD if you dont have one.");
+
+	static bool anotherWindow = false;
+	ImGui::Checkbox("Choose exact block", &anotherWindow);
+	if (anotherWindow)
+	{
+		static bool firstTime = true;
+		if (firstTime)
+		{
+			ImGui::SetNextWindowPos({ 100,0 });
+			ImGui::SetNextWindowSize({ 100,300 });
+		}
+		for (size_t i = 0; i < factory.getStorage().size(); ++i)
+		{
+			if (ImGui::Button(std::to_string(i).c_str()))
+				factory.setCurrent(i);
+		}
+
+	}
 
 	ImGui::Spacing();
 	ImGui::Separator();
 
-	ImGui::Checkbox("Show the Quad", &figure.figureIsShown());
+	//static bool FiguresShown = true;
+	//if (ImGui::Checkbox("Show the figures/figure", &FiguresShown))
+	//	factory.setAllFiguresShown(FiguresShown);
 
-	ImGui::Spacing();
-
+	//ImGui::Spacing();
+	
 	float colorFigure1[3] =
 	{
-		figure.getColors()[0][0],
-		figure.getColors()[0][1],
-		figure.getColors()[0][2],
+		factory.getFigure(factory.getCurrentNum()).getColors()[0][0],
+		factory.getFigure(factory.getCurrentNum()).getColors()[0][1],
+		factory.getFigure(factory.getCurrentNum()).getColors()[0][2],
 	};
 	float colorFigure2[3] =
 	{
-		figure.getColors()[1][0],
-		figure.getColors()[1][1],
-		figure.getColors()[1][2],
+		factory.getFigure(factory.getCurrentNum()).getColors()[1][0],
+		factory.getFigure(factory.getCurrentNum()).getColors()[1][1],
+		factory.getFigure(factory.getCurrentNum()).getColors()[1][2],
 	};
 	float colorFigure3[3] =
 	{
-		figure.getColors()[2][0],
-		figure.getColors()[2][1],
-		figure.getColors()[2][2],
+		factory.getFigure(factory.getCurrentNum()).getColors()[2][0],
+		factory.getFigure(factory.getCurrentNum()).getColors()[2][1],
+		factory.getFigure(factory.getCurrentNum()).getColors()[2][2],
 	};
 	float colorFigure4[3] =
 	{
-		figure.getColors()[3][0],
-		figure.getColors()[3][1],
-		figure.getColors()[3][2],
+		factory.getFigure(factory.getCurrentNum()).getColors()[3][0],
+		factory.getFigure(factory.getCurrentNum()).getColors()[3][1],
+		factory.getFigure(factory.getCurrentNum()).getColors()[3][2],
 	};
 
 	if (ImGui::ColorEdit3("Color of the Quad vertex 1", colorFigure1) ||
@@ -462,15 +481,32 @@ void imGuiSpecification()
 		ImGui::ColorEdit3("Color of the Quad vertex 3", colorFigure1) ||
 		ImGui::ColorEdit3("Color of the Quad vertex 4", colorFigure1))
 	{
-		vertexSpecification();
+		std::array<float, 3> colors1;
+		std::array<float, 3> colors2;
+		std::array<float, 3> colors3;
+		std::array<float, 3> colors4;
+		for (size_t i = 0; i < 3; ++i)
+		{
+			colors1[i] = colorFigure1[i];
+			colors2[i] = colorFigure2[i];
+			colors3[i] = colorFigure3[i];
+			colors4[i] = colorFigure4[i];
+		}
+		factory.getFigure(factory.getCurrentNum()).setColors({ {colors1, colors2,colors3,colors4} });
+		for (auto& i : factory.getFigure(factory.getCurrentNum()).getColors())
+		{
+			for (auto& j : i)
+			{
+				std::cout << std::format("number: {}\n", j);
+			}
+		}
 	}
 
 	ImGui::Spacing();
 
-	if (ImGui::SliderFloat("Width", &figure.getWidth(), 0.1f, 1.0f) ||
-		ImGui::SliderFloat("Height", &figure.getHeight(), 0.1f, 1.0f))
+	if (ImGui::SliderFloat("Width", &factory.getFigure(factory.getCurrentNum()).getWidth(), 0.1f, 1.0f) ||
+		ImGui::SliderFloat("Height", &factory.getFigure(factory.getCurrentNum()).getHeight(), 0.1f, 1.0f))
 	{
-		vertexSpecification();
 	}
 
 	ImGui::Separator();
@@ -508,7 +544,7 @@ void input()
 			camera.mouseLook(mouseX, mouseY);
 		}
 
-		figure.setRotation(figure.getRotation() - 0.1f);
+		factory.getFigure(factory.getCurrentNum()).setRotation(factory.getFigure(factory.getCurrentNum()).getRotation() - 0.1f);
 		float speed = 0.1f;
 		// use some other keys to move our object
 		if (state[SDL_SCANCODE_W])
@@ -554,12 +590,12 @@ void preDraw()
 	// use our shader
 	glUseProgram(gGraphicsPipelineProgram);
 
-	figure.setRotation(figure.getRotation() - 0.1f);
+	factory.getFigure(factory.getCurrentNum()).setRotation(factory.getFigure(factory.getCurrentNum()).getRotation() - 0.1f);
 
 	// from local to world space
 	glm::mat4 model(1.0f); 
-	model = glm::translate(model, glm::vec3(0.0f, 0.0f, figure.getOffset()));
-	model = glm::rotate(model, glm::radians(figure.getRotation()), glm::vec3(0.0f, 1.0f, 0.0f));
+	model = glm::translate(model, glm::vec3(0.0f, 0.0f, factory.getFigure(factory.getCurrentNum()).getOffset()));
+	model = glm::rotate(model, glm::radians(factory.getFigure(factory.getCurrentNum()).getRotation()), glm::vec3(0.0f, 1.0f, 0.0f));
 	model = glm::scale(model, glm::vec3(2.0f, 2.0f, 2.0f));
 
 	GLuint uModelMatrixLocation = glGetUniformLocation(gGraphicsPipelineProgram, "uModelMatrix");
@@ -605,7 +641,7 @@ void draw()
 {
 	ImGui::EndFrame();
 
-	figure.render();
+	factory.render();
 
 	// stopping using our current graphics pipeline
 	glUseProgram(0);
