@@ -1,7 +1,7 @@
 #pragma once
 #include <iostream>
 
-#include "Renderer.h"
+class Renderer;
 
 class IndexBuffer
 {

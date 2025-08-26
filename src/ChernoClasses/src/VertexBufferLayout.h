@@ -28,10 +28,7 @@ struct VertexBufferElement
 class VertexBufferLayout
 {
 public:
-	VertexBufferLayout(uint32_t pStride)
-		: mStride( pStride )
-	{ }
-	~VertexBufferLayout();
+	VertexBufferLayout() = default;
 
 	auto push(uint32_t pType, uint32_t pCount) -> void
 	{

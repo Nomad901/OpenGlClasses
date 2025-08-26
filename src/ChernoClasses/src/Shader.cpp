@@ -1,4 +1,5 @@
 #include "Shader.h"
+#include "Renderer.h"
 
 Shader::Shader(const std::filesystem::path& pPath)
 {
@@ -19,6 +20,11 @@ void Shader::bind() const
 void Shader::unbind() const
 {
 	GLCall(glUseProgram(0));
+}
+
+void Shader::setUniform1i(std::string_view pName, int32_t pValue)
+{
+	GLCall(glUniform1i(getUniformLocation(pName), pValue));	
 }
 
 void Shader::setUniform1f(std::string_view pName, float pValue)
@@ -104,6 +110,8 @@ uint32_t Shader::createShader(const std::filesystem::path& pVertexShader, const 
 
 	GLCall(glDeleteShader(vs));
 	GLCall(glDeleteShader(fs));
+	
+	return program;
 }
 
 uint32_t Shader::getUniformLocation(std::string_view pName)

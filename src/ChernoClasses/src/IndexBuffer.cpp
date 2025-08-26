@@ -1,4 +1,5 @@
 #include "IndexBuffer.h"
+#include "Renderer.h"
 
 IndexBuffer::IndexBuffer(const uint32_t* pData, uint32_t pCount)
 {

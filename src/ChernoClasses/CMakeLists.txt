@@ -5,6 +5,8 @@ cmake_minimum_required(VERSION 3.16)
 
 set(CMAKE_CXX_STANDARD 23)
 
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
 #! ! ! ! ! ! !
 #set this to true to ship the game!
 #basically this will change the RESOURCES_PATH to be the local path
@@ -121,3 +123,9 @@ if(TARGET SDL3::SDL3main)
     target_link_libraries(mygame PUBLIC SDL3::SDL3main)
 endif()
 target_link_libraries(mygame PUBLIC SDL3::SDL3 glad imgui glm::glm)
+
+set_target_properties(glad		  PROPERTIES FOLDER "CMakePredefinedTargets")
+set_target_properties(glm		  PROPERTIES FOLDER "CMakePredefinedTargets")
+set_target_properties(imgui		  PROPERTIES FOLDER "CMakePredefinedTargets")
+set_target_properties(SDL_uclibc  PROPERTIES FOLDER "CMakePredefinedTargets")
+set_target_properties(SDL3-static PROPERTIES FOLDER "CMakePredefinedTargets")

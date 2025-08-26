@@ -4,6 +4,10 @@
 
 #include "glad/glad.h"
 
+class VertexArray;
+class IndexBuffer;
+class Shader;
+
 #ifdef WIN32
 	#define DEBUG_BREAK() __debugbreak()
 #else 
@@ -21,5 +25,14 @@ bool GLLogCall(const char* pFunction, const char* pFile, int32_t pLine);
 
 class Renderer
 {
+public:
+    Renderer() = default;
+    ~Renderer() = default;
+
+    void clear() const;
+    void draw(const VertexArray& pVa, const IndexBuffer& pIB, const Shader& pShader) const; 
+
+private:
+
 };
 
