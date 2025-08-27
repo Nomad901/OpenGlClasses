@@ -37,6 +37,11 @@ void Shader::setUniform4f(std::string_view pName, float pV0, float pV1, float pV
 	GLCall(glUniform4f(getUniformLocation(pName), pV0, pV1, pV2, pV3));
 }
 
+void Shader::setUniform4fv(std::string_view pName, const glm::mat4& pData)
+{
+	GLCall(glUniformMatrix4fv(getUniformLocation(pName), 1, GL_FALSE, &pData[0][0]));
+}
+
 Shader::ShaderProgramSource Shader::parseShader(const std::filesystem::path& pPath)
 {
 	std::ifstream ifstream(pPath);
