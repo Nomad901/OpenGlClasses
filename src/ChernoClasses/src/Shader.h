@@ -6,6 +6,8 @@
 #include <sstream>
 #include <unordered_map>
 
+#include "glm/glm.hpp"
+
 class Renderer;
 
 class Shader
@@ -22,6 +24,7 @@ public:
 	void setUniform1i(std::string_view pName, int32_t pValue);
 	void setUniform1f(std::string_view pName, float pValue);
 	void setUniform4f(std::string_view pName, float pV0, float pV1, float pV2, float pV3);
+	void setUniform4fv(std::string_view pName, const glm::mat4& pData);
 
 private:
 	ShaderProgramSource parseShader(const std::filesystem::path& pPath);
