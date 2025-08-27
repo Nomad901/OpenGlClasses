@@ -6,9 +6,8 @@
 
 #include "SDL3/SDL.h"
 #include "glad/glad.h"
-#include "imgui.h"
-#include "imgui_impl_sdl3.h"
-#include "imgui_impl_opengl3.h"
+#include "glm.hpp"
+#include "glm/gtc/matrix_transform.hpp"
 
 #include "VertexBuffer.h"
 #include "IndexBuffer.h"
@@ -46,38 +45,13 @@ int32_t main(int32_t argc, int8_t* argv[])
 	if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress))
 		std::cout << "coulndt make gladLoadGlLoader!\n";
 
-	IMGUI_CHECKVERSION();
-	ImGui::CreateContext();
-	ImGuiIO& io = ImGui::GetIO();
-
-	io.BackendFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-	
-	ImGui::StyleColorsDark();
-
-	ImGui_ImplOpenGL3_Init();
-	ImGui_ImplSDL3_InitForOpenGL(window, context);
-
 	{
 		float positions[] =
 		{
-			-0.5f, -0.5f, 
-			 0.5f, -0.5f, 
-			 0.5f,  0.5f, 
-			-0.5f,  0.5f, 
-		};
-
-		// for the texture
-		//0.0f, 0.0f,
-		//1.0f, 0.0f,
-		//1.0f, 1.0f,
-		//0.0f, 1.0f
-
-		float positions2[] =
-		{
-			-0.1f, -0.1f,
-			 0.1f, -0.1f,
-			 0.1f,  0.1f,
-			-0.1f,  0.1f,
+			-100.0f, -100.0f, 100.0f, 0.0f, 0.0f,
+			 100.0f, -100.0f, 100.0f, 1.0f, 0.0f,
+			 100.0f,  100.0f, 100.0f, 1.0f, 1.0f,
+			-100.0f,  100.0f, 100.0f, 0.0f, 1.0f
 		};
 
 		uint32_t indicies[] =
@@ -88,48 +62,46 @@ int32_t main(int32_t argc, int8_t* argv[])
 
 		GLCall(glEnable(GL_BLEND));
 		GLCall(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
-
+		
 		VertexArray va;
-		VertexArray va2;
 		VertexBuffer vb(positions, 4 * 2 * sizeof(float));
-		VertexBuffer vb2(positions2, 4 * 2 * sizeof(float));
 
 		VertexBufferLayout layout;
+		layout.push(GL_FLOAT, 3);
 		layout.push(GL_FLOAT, 2);
 		va.addBuffer(vb, layout);
-		
-		VertexBufferLayout layout2; 
-		layout2.push(GL_FLOAT, 2);
-		va2.addBuffer(vb2, layout2);
 
 		IndexBuffer ib(indicies, 6);
+		
+		glm::mat4 proj = glm::ortho(0.0f, 1280.0f, 0.0f, 720.0f, -500.0f, 500.0f);
+		glm::mat4 viewMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(-100.0, 1.0f, 1.0f));
+		glm::mat4 mvp = proj * viewMatrix;
 
 		std::string resourcePath = RESOURCES_PATH;
 		Shader shader(resourcePath + "shaders.shader");
 		shader.bind();
-		shader.setUniform4f("uColor", 1.0f, 0.0f, 1.0f, 1.0f);
+		//shader.setUniform4f("uColor", 1.0f, 0.0f, 1.0f, 1.0f);
+		shader.setUniform4fv("uMVP", mvp);
 
-		Shader shader2(resourcePath + "shaders.shader");
-		shader2.bind();
-		shader2.setUniform4f("uColorSec", 1.0f, 1.0f, 1.0f, 0.5f);
-
-		//Texture texture(resourcePath + "dockey.png");
-		//texture.bind(); // if we set inside of this function for instance 2, then we need to set this 2 in the next function;
-		//shader.setUniform1i("uTexture", 0); // right here, instead of 0 we would need to set 2;
+		Texture texture(resourcePath + "dockey.png");
+		texture.bind(); // if we set inside of this function for instance 2, then we need to set this 2 in the next function;
+		shader.setUniform1i("uTexture", 0); // right here, instead of 0 we would need to set 2;
 
 		va.unbind();
-		va2.unbind();
 		vb.unbind();
-		vb2.unbind();
 		ib.unbind();
 		shader.unbind();
-		shader2.unbind();
 
 		Renderer renderer;
 
 		float r = 0.0f;
 		float increment = 0.05f;
+		
+		float projectionVariableY = 10.0f;
+		float projectionVariableX = 10.0f;
+		float projectionVariableZ = 10.0f;
 
+		std::unordered_map<SDL_Keycode, bool> keyCodes;
 		bool loopIsActive{ true };
 		SDL_Event events;
 		while (loopIsActive)
@@ -144,11 +116,26 @@ int32_t main(int32_t argc, int8_t* argv[])
 					loopIsActive = false;
 					break;
 				}
+				
+				if (events.type == SDL_EVENT_KEY_DOWN)
+					keyCodes[events.key.key] = true;
+				if (events.type == SDL_EVENT_KEY_UP)
+					keyCodes[events.key.key] = false;
 			}
+			
+			if (keyCodes[SDLK_W])
+				projectionVariableY -= 10.0f;
+			if (keyCodes[SDLK_S])
+				projectionVariableY += 10.0f;
+			if (keyCodes[SDLK_A])
+				projectionVariableX += 10.0f;
+			if (keyCodes[SDLK_D])
+				projectionVariableX -= 10.0f;
+			if (keyCodes[SDLK_UP])
+				projectionVariableZ -= 10.0f;
+			if (keyCodes[SDLK_DOWN])
+				projectionVariableZ += 10.0f;
 
-			ImGui_ImplSDL3_NewFrame();
-			ImGui_ImplOpenGL3_NewFrame();
-			ImGui::NewFrame();
 			glViewport(0, 0, 1280, 720);
 			glClearColor(0.0f,
 						 0.0f,
@@ -156,22 +143,10 @@ int32_t main(int32_t argc, int8_t* argv[])
 						 1.0f);
 
 			renderer.draw(va, ib, shader);
-			renderer.draw(va2, ib, shader2);
-			//shader.setUniform4f("uColor", r, 0.3f, 0.8f, 1.0f);
-			
-			static bool firstTime = true;
-			if (firstTime)
-			{
-				ImGui::SetNextWindowPos({ 100,100 });
-				ImGui::SetNextWindowSize({ 300,300 });
-				ImGui::SetNextWindowCollapsed(false);
-			}
 
-			ImGui::Begin("Cubes helper");
-
-			ImGui::Button("fff");
-
-			ImGui::End();
+			glm::mat4 viewMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(projectionVariableX, projectionVariableY, projectionVariableZ));
+			glm::mat4 mvp = proj * viewMatrix;
+			shader.setUniform4fv("uMVP", mvp);
 
 			if (r > 1.0f)
 				increment = -0.005f;
@@ -180,14 +155,10 @@ int32_t main(int32_t argc, int8_t* argv[])
 
 			r += increment;
 
-			ImGui::EndFrame();
 			SDL_GL_SwapWindow(window);
 		}
 	}
 
-	ImGui_ImplSDL3_Shutdown();
-	ImGui_ImplOpenGL3_Shutdown();
-	ImGui::DestroyContext();
 	SDL_GL_DestroyContext(context);
 	SDL_DestroyWindow(window);
 	SDL_Quit();
