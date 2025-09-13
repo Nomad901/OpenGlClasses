@@ -9,4 +9,4 @@ mkdir build <br/>
 cd build <br/>
 cmake .. <br/>
 
-![Uploading diddyGif.gif…]()
+![diddyGif](https://github.com/user-attachments/assets/caa57d2e-1e6c-49e2-998c-309738e5ba46)
