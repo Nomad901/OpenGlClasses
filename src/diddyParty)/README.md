@@ -9,4 +9,4 @@ mkdir build <br/>
 cd build <br/>
 cmake .. <br/>
 
-<img src="./OpenGlClasses/src/diddyParty)/diddyGif.gif>
+![Uploading diddyGif.gif…]()
