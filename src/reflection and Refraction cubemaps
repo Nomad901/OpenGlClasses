@@ -1,0 +1,80 @@
+// reflection
+#version 440
+
+out vec4 outColor;
+
+in vec3 fragPos;
+in vec3 fragNormals;
+
+uniform vec3 uCameraPos;
+uniform samplerCube uSkybox;
+
+void main()
+{
+	vec3 I   = normalize(fragPos - uCameraPos);
+	vec3 R   = reflect(I, normalize(fragNormals));
+	outColor = vec4(texture(uSkybox, R).rgb, 1.0f);
+}
+
+#version 440
+
+layout(location = 0) in vec3 pos;
+layout(location = 1) in vec3 normals;
+layout(location = 2) in vec4 color;
+layout(location = 3) in vec2 posTex;
+
+out vec3 fragPos;
+out vec3 fragNormals;
+
+uniform mat4 uMVP;
+uniform mat4 uModel;
+
+void main()
+{
+	gl_Position = uMVP * vec4(pos, 1.0);
+
+	fragNormals = mat3(transpose(inverse(uModel))) * normals;
+	fragPos = vec3(uModel * vec4(pos, 1.0f));
+}
+
+// refraction
+
+#version 440
+
+out vec4 outColor;
+
+in vec3 fragPos;
+in vec3 fragNormals;
+
+uniform vec3 uCameraPos;
+uniform samplerCube uSkybox;
+
+void main()
+{
+	float ratio = 1.00f / 1.52f; 
+	vec3 I   = normalize(fragPos - uCameraPos);
+	vec3 R   = refract(I, normalize(fragNormals), ratio);
+	outColor = vec4(texture(uSkybox, R).rgb, 1.0f);
+}
+
+#version 440
+
+layout(location = 0) in vec3 pos;
+layout(location = 1) in vec3 normals;
+layout(location = 2) in vec4 color;
+layout(location = 3) in vec2 posTex;
+
+out vec3 fragPos;
+out vec3 fragNormals;
+
+uniform mat4 uMVP;
+uniform mat4 uModel;
+
+void main()
+{
+	gl_Position = uMVP * vec4(pos, 1.0);
+
+	fragNormals = mat3(transpose(inverse(uModel))) * normals;
+	fragPos = vec3(uModel * vec4(pos, 1.0f));
+}
+
